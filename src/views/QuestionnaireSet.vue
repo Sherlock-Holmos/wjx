@@ -193,8 +193,9 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { Toast } from 'vant';
+import { showToast } from 'vant';
 import { useRoute } from 'vue-router';
+import axios from 'axios';
 
 const router = useRouter();
 const route = useRoute();
@@ -202,10 +203,13 @@ const questionIdCounter = ref(1);
 
 // 问卷数据
 const surveyTitle = ref('');
+const surveyDescription = ref('');
+const coverImageUrl = ref('');
 const questions = ref([]);
 const showQuestionTypeSelector = ref(false);
 const showQuestionEditor = ref(false);
 const currentQuestion = ref(null);
+
 
 // 题目类型定义
 const basicTypes = [
@@ -228,6 +232,21 @@ const templateTypes = [
   { id: 'region', name: '地区', icon: 'location-o', typeName: '地区选择' }
 ];
 
+// 创建 axios 实例
+const api = axios.create({
+  baseURL: 'http://localhost:8080',
+  timeout: 10000
+});
+
+// 从 localStorage 获取用户信息
+const getUser = () => {
+  const userData = localStorage.getItem('user');
+  if (userData) {
+    return JSON.parse(userData);
+  }
+  return null;
+};
+
 onMounted(() => {
   // 检查路由参数中是否有title
   if (route.query.title) {
@@ -236,6 +255,12 @@ onMounted(() => {
     // 没有则使用默认标题
     surveyTitle.value = '未命名问卷';
   }
+
+  // 检查用户是否登录
+  if (!getUser()) {
+    showToast('请先登录系统');
+    router.push({ name: "RegisterPage" });
+  }
 });
 
 const closeEditor = () => {
@@ -243,11 +268,11 @@ const closeEditor = () => {
 };
 
 const addSurveyInstruction = () => {
-  Toast('添加问卷说明');
+  showToast('添加问卷说明');
 };
 
 const switchTab = (tab) => {
-  Toast(`切换到: ${tab}`);
+  showToast(`切换到: ${tab}`);
 };
 
 const showQuestionTypes = () => {
@@ -263,7 +288,7 @@ const addDemographicQuestions = () => {
       createNewQuestion(type);
     }
   });
-  Toast('已添加基础信息题目');
+  showToast('已添加基础信息题目');
 };
 
 const selectQuestionType = (type) => {
@@ -349,7 +374,7 @@ const editQuestion = (id) => {
 
 const deleteQuestion = (id) => {
   questions.value = questions.value.filter(q => q.id !== id);
-  Toast('题目已删除');
+  showToast('题目已删除');
 };
 
 // 添加选项
@@ -366,7 +391,7 @@ const removeOption = (index) => {
   if (currentQuestion.value.options.length > 1) {
     currentQuestion.value.options.splice(index, 1);
   } else {
-    Toast('至少保留一个选项');
+    showToast('至少保留一个选项');
   }
 };
 
@@ -376,19 +401,57 @@ const saveQuestion = () => {
     if (index !== -1) {
       // 更新现有题目
       questions.value[index] = { ...currentQuestion.value };
-      Toast('题目更新成功');
+      showToast('题目更新成功');
     } else {
       // 添加新题目
       questions.value.push({ ...currentQuestion.value });
-      Toast('题目添加成功');
+      showToast('题目添加成功');
     }
   }
 
   showQuestionEditor.value = false;
 };
 
-const saveSurvey = () => {
-  Toast('问卷保存成功');
+const saveSurvey = async () => {
+  // 首先获取用户信息
+  const user = getUser(); // 确保这行在最前面
+
+  // 检查用户是否已登录
+  if (!user) {
+    showToast({
+      type: 'fail',
+      message: '请先登录系统'
+    });
+    router.push('/login');
+    return;
+  }
+
+  // 再使用 user 对象
+  const surveyData = {
+    title: surveyTitle.value,
+    description: surveyDescription.value,
+    coverImage: coverImageUrl.value,
+    questions: questions.value.map(q => ({
+      type: q.type,
+      title: q.title,
+      required: q.required,
+      options: (q.options || []).map(opt => ({
+        id: opt.id?.toString() || generateId(), // 确保有唯一ID
+        text: opt.text
+      }))
+    })),
+    creatorId: user.id // 使用用户ID作为创建者ID
+  };
+
+  try {
+    // 发送创建请求
+    const response = await api.post('/api/surveys', surveyData);
+    showToast('问卷保存成功！');
+    router.push({ name: 'MainPage' });
+  } catch (error) {
+    console.error('保存失败:', error);
+    showToast('保存失败: ' + error.response?.data?.message);
+  }
 };
 
 </script>
