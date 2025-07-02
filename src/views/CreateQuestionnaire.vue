@@ -7,11 +7,7 @@
       </template>
       <template #right>
         <van-dropdown-menu active-color="#1989fa">
-          <van-dropdown-item 
-            v-model="activeType" 
-            :options="questionnaireTypes" 
-            title="切换问卷类型" 
-          />
+          <van-dropdown-item v-model="activeType" :options="questionnaireTypes" title="切换问卷类型" />
         </van-dropdown-menu>
       </template>
     </van-nav-bar>
@@ -26,29 +22,16 @@
         </div>
         <div class="feature-tag">72种题型，强大逻辑设置，支持红包抽奖等功能</div>
       </div>
-      
+
       <div class="title-input">
-        <input 
-          type="text" 
-          v-model="surveyTitle" 
-          placeholder="请输入标题" 
-          @focus="showKeyboard = true"
-        />
+        <input type="text" v-model="surveyTitle" placeholder="请输入标题" @focus="showKeyboard = true" />
       </div>
-      
+
       <div class="creation-buttons">
-        <van-button 
-          round 
-          class="primary-btn"
-          @click="createBlankSurvey"
-        >
+        <van-button round class="primary-btn" @click="createBlankSurvey">
           创建调查
         </van-button>
-        <van-button 
-          round 
-          class="secondary-btn"
-          @click="showAICreation = true"
-        >
+        <van-button round class="secondary-btn" @click="showAICreation = true">
           AI 创建问卷
         </van-button>
       </div>
@@ -60,39 +43,22 @@
         <div class="section-title">复制模板问卷</div>
         <div class="learn-more">学习更多</div>
       </div>
-      
-      <van-search 
-        v-model="searchKeyword" 
-        shape="round" 
-        placeholder="搜索其他用户公开的问卷" 
-      />
-      
+
+      <van-search v-model="searchKeyword" shape="round" placeholder="搜索其他用户公开的问卷" />
+
       <div class="category-tabs">
         <van-tabs v-model="activeCategory">
-          <van-tab 
-            v-for="category in categories" 
-            :key="category.value" 
-            :title="category.text" 
-            :name="category.value"
-          />
+          <van-tab v-for="category in categories" :key="category.value" :title="category.text" :name="category.value" />
         </van-tabs>
       </div>
-      
+
       <div class="template-grid">
-        <div 
-          v-for="(template, index) in filteredTemplates" 
-          :key="index" 
-          class="template-card"
-        >
+        <div v-for="(template, index) in filteredTemplates" :key="index" class="template-card">
           <div class="template-content">
             <div class="template-title">{{ template.title }}</div>
             <div class="template-stats">
               <span>共{{ template.questionCount }}题</span>
-              <van-button 
-                round 
-                class="reference-btn"
-                @click.stop="useTemplate(template)"
-              >
+              <van-button round class="reference-btn" @click.stop="useTemplate(template)">
                 引用
               </van-button>
             </div>
@@ -112,16 +78,8 @@
           <div>📝 AI智能问卷生成</div>
           <p>描述您想要的问卷内容，AI将为您智能生成完整的问卷</p>
         </div>
-        <textarea 
-          placeholder="请描述您要创建的问卷内容，例如：我想创建一个关于大学生消费习惯的调查问卷，包含10个问题..." 
-          v-model="aiPrompt"
-        ></textarea>
-        <van-button 
-          round 
-          block 
-          type="primary" 
-          class="ai-generate-btn"
-        >
+        <textarea placeholder="请描述您要创建的问卷内容，例如：我想创建一个关于大学生消费习惯的调查问卷，包含10个问题..." v-model="aiPrompt"></textarea>
+        <van-button round block type="primary" class="ai-generate-btn">
           生成问卷
         </van-button>
       </div>
@@ -187,8 +145,8 @@ const filteredTemplates = computed(() => {
     // 匹配分类
     const categoryMatch = activeCategory.value === 'all' || template.category === activeCategory.value;
     // 匹配搜索关键词
-    const keywordMatch = !searchKeyword.value || 
-                          template.title.toLowerCase().includes(searchKeyword.value.toLowerCase());
+    const keywordMatch = !searchKeyword.value ||
+      template.title.toLowerCase().includes(searchKeyword.value.toLowerCase());
     return categoryMatch && keywordMatch;
   });
 });
@@ -200,7 +158,7 @@ const createBlankSurvey = () => {
   }
   console.log('创建空白问卷:', surveyTitle.value);
   // 这里可以添加跳转到问卷编辑页面的逻辑
-  router.push({ name: 'QuestionnaireSet', params: { title: surveyTitle.value } });
+  router.push({ name: 'QuestionnaireSet', query: { title: surveyTitle.value } });
 };
 
 // 使用模板
@@ -235,7 +193,7 @@ watch(showKeyboard, (value) => {
 
 .van-nav-bar {
   background-color: #fff;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -252,8 +210,8 @@ watch(showKeyboard, (value) => {
   border-radius: 16px;
   padding: 16px;
   margin: 16px;
-  margin-top: 56px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  margin-top: 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
 }
 
 .creation-header {
@@ -291,6 +249,21 @@ watch(showKeyboard, (value) => {
 
 .title-input {
   margin-bottom: 20px;
+  color: #333;
+}
+
+/* 聚焦状态保持深色 */
+.title-input:focus {
+  color: #222 !important;
+  /* 更深的聚焦状态 */
+  border-color: #1E62FF;
+  /* 可添加聚焦边框 */
+}
+
+/* 设置placeholder颜色 */
+.title-input::placeholder {
+  color: #aaa !important;
+  /* 浅灰色提示文字 */
 }
 
 .title-input input {
@@ -332,7 +305,7 @@ watch(showKeyboard, (value) => {
   border-radius: 16px;
   padding: 16px;
   margin: 0 16px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
 }
 
 .section-header {
@@ -391,7 +364,7 @@ watch(showKeyboard, (value) => {
   position: relative;
   overflow: hidden;
   height: 120px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
 }
 
 .template-content {

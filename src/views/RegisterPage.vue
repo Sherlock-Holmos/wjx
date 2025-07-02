@@ -6,45 +6,29 @@
       <div class="cloud cloud1"></div>
       <div class="cloud cloud2"></div>
     </div>
-    
+
     <!-- 登录/注册标签页 -->
     <div class="tabs-section">
-      <div 
-        class="tab" 
-        :class="{ active: currentTab === 'login' }"
-        @click="currentTab = 'login'"
-      >
+      <div class="tab" :class="{ active: currentTab === 'login' }" @click="currentTab = 'login'">
         登录
       </div>
-      <div 
-        class="tab" 
-        :class="{ active: currentTab === 'register' }"
-        @click="currentTab = 'register'"
-      >
+      <div class="tab" :class="{ active: currentTab === 'register' }" @click="currentTab = 'register'">
         注册
       </div>
     </div>
-    
+
     <!-- 账号类型选择 - 仅在注册页显示 -->
     <div v-if="currentTab === 'register'" class="account-type">
-      <div 
-        class="radio-option"
-        :class="{ selected: accountType === 'personal' }"
-        @click="accountType = 'personal'"
-      >
+      <div class="radio-option" :class="{ selected: accountType === 'personal' }" @click="accountType = 'personal'">
         <div class="radio-button"></div>
         <span>个人免费账号</span>
       </div>
-      <div 
-        class="radio-option"
-        :class="{ selected: accountType === 'business' }"
-        @click="accountType = 'business'"
-      >
+      <div class="radio-option" :class="{ selected: accountType === 'business' }" @click="accountType = 'business'">
         <div class="radio-button"></div>
         <span>企业试用账号</span>
       </div>
     </div>
-    
+
     <!-- 表单区域 -->
     <div class="form-container">
       <!-- 登录表单 -->
@@ -53,149 +37,95 @@
         <div class="input-group">
           <label v-if="loginType === 'account'">手机号/邮箱/用户名</label>
           <label v-else-if="loginType === 'mobile'">手机号码</label>
-          
-          <input
-            v-model="loginAccount"
-            type="text"
-            :placeholder="loginType === 'account' ? '手机号/邮箱/用户名' : '11位手机号码'"
-            class="input-field"
-          />
+
+          <input v-model="loginAccount" type="text" :placeholder="loginType === 'account' ? '手机号/邮箱/用户名' : '11位手机号码'"
+            class="input-field" />
         </div>
-        
+
         <!-- 密码输入框 -->
         <div v-if="loginType === 'account'" class="input-group">
           <div class="input-row">
             <label>密码</label>
             <span class="forgot-password" @click="handleForgotPassword">忘记密码?</span>
           </div>
-          <input
-            v-model="loginPassword"
-            type="password"
-            placeholder="密码"
-            class="input-field"
-          />
+          <input v-model="loginPassword" type="password" placeholder="密码" class="input-field" />
         </div>
-        
+
         <!-- 短信验证码输入 - 仅短信登录时显示 -->
         <div v-if="loginType === 'mobile'" class="input-group">
           <label>验证码</label>
           <div class="sms-input">
-            <input
-              v-model="smsCode"
-              type="text"
-              placeholder="短信验证码"
-              class="input-field"
-            />
-            <button 
-              class="get-code-btn"
-              @click="getVerificationCode"
-              :disabled="isCodeSending"
-            >
+            <input v-model="smsCode" type="text" placeholder="短信验证码" class="input-field" />
+            <button class="get-code-btn" @click="getVerificationCode" :disabled="isCodeSending">
               {{ isCodeSending ? `已发送(${countdown}s)` : '获取验证码' }}
             </button>
           </div>
         </div>
-        
+
         <!-- 登录按钮 -->
-        <button 
-          class="primary-btn"
-          @click="handleLogin"
-          :disabled="isLoading"
-        >
+        <button class="primary-btn" @click="handleLogin" :disabled="isLoading">
           <span v-if="!isLoading">登录</span>
           <van-loading v-else size="20px" color="#ffffff" />
         </button>
-        
+
         <!-- 切换登录方式 -->
         <div class="login-options">
-          <div 
-            class="login-option"
-            @click="loginType = 'account'"
-          >
+          <div class="login-option" @click="loginType = 'account'">
             <van-icon name="user-o" size="1.5rem" />
             <span>账号密码登录</span>
           </div>
-          <div 
-            class="login-option"
-            @click="loginType = 'mobile'"
-          >
+          <div class="login-option" @click="loginType = 'mobile'">
             <van-icon name="chat" size="1.5rem" />
             <span>短信验证码登录</span>
           </div>
         </div>
       </div>
-      
+
       <!-- 注册表单 -->
       <div v-if="currentTab === 'register'">
         <!-- 手机号输入框 -->
         <div class="input-group">
           <label>11位手机号码</label>
-          <input
-            v-model="registerPhone"
-            type="tel"
-            placeholder="请输入手机号"
-            class="input-field"
-          />
+          <input v-model="registerPhone" type="tel" placeholder="请输入手机号" class="input-field" />
         </div>
-        
+
         <!-- 智能验证区域 -->
         <div class="verification-group">
-          <button 
-            class="verification-btn"
-            @click="startVerification"
-          >
+          <button class="verification-btn" @click="startVerification">
             点击按钮开始智能验证
           </button>
         </div>
-        
+
         <!-- 验证码输入框 -->
         <div class="input-group">
           <label>短信验证码</label>
           <div class="sms-input">
-            <input
-              v-model="registerSmsCode"
-              type="text"
-              placeholder="短信验证码"
-              class="input-field"
-            />
-            <button 
-              class="get-code-btn"
-              @click="getVerificationCode"
-              :disabled="isCodeSending"
-            >
+            <input v-model="registerSmsCode" type="text" placeholder="短信验证码" class="input-field" />
+            <button class="get-code-btn" @click="getVerificationCode" :disabled="isCodeSending">
               {{ isCodeSending ? `已发送(${countdown}s)` : '获取验证码' }}
             </button>
           </div>
         </div>
-        
+
         <!-- 密码输入框 -->
         <div class="input-group">
           <label>8-20位密码</label>
-          <input
-            v-model="registerPassword"
-            type="password"
-            placeholder="密码"
-            class="input-field"
-          />
+          <input v-model="registerPassword" type="password" placeholder="密码" class="input-field" />
         </div>
-        
+
         <!-- 注册按钮 -->
-        <button 
-          class="primary-btn"
-          @click="handleRegister"
-          :disabled="isLoading"
-        >
+        <button class="primary-btn" @click="handleRegister" :disabled="isLoading">
           <span v-if="!isLoading">注册</span>
           <van-loading v-else size="20px" color="#ffffff" />
         </button>
-        
+
         <!-- 切换选项 -->
         <div class="switch-tab" @click="currentTab = 'login'">
           已有账号？立即登录
         </div>
       </div>
     </div>
-    
+
     <!-- 协议条款 -->
     <div class="agreement">
       <div class="agreement-box" @click="agreed = !agreed">
@@ -258,7 +188,7 @@ const getVerificationCode = () => {
       return;
     }
   }
-  
+
   // 开始倒计时
   isCodeSending.value = true;
   const timer = setInterval(() => {
@@ -269,17 +199,17 @@ const getVerificationCode = () => {
       countdown.value = 60;
     }
   }, 1000);
-  
+
   showSuccessToast('验证码已发送');
 };
 
 // 登录处理（调用API）
 const handleLogin = async () => {
   if (currentTab.value !== 'login') return;
-  
+
   try {
     isLoading.value = true;
-    
+
     let response;
     if (loginType.value === 'account') {
       // 账号密码登录
@@ -287,7 +217,7 @@ const handleLogin = async () => {
         showFailToast('请输入账号和密码');
         return;
       }
-      
+
       response = await axios.post(`${API_BASE_URL}/login/password`, {
         phoneOrUsername: loginAccount.value,
         password: loginPassword.value
@@ -302,7 +232,7 @@ const handleLogin = async () => {
         showFailToast('请输入验证码');
         return;
       }
-      
+
       response = await axios.post(`${API_BASE_URL}/login/sms`, {
         phone: loginAccount.value
       });
@@ -311,10 +241,10 @@ const handleLogin = async () => {
     // 登录成功处理
     const user = response.data;
     localStorage.setItem('user', JSON.stringify(user));
-    
+
     showSuccessToast('登录成功');
     router.push({ name: 'MainPage' });
-    
+
   } catch (error) {
     // 从错误响应中提取真实错误消息
     const errorMessage = error.response?.data || error.message || '登录失败，请重试';
@@ -327,31 +257,31 @@ const handleLogin = async () => {
 // 注册处理（调用API）
 const handleRegister = async () => {
   if (currentTab.value !== 'register') return;
-  
+
   // 前端验证
   if (!registerPhone.value || !/^1[3-9]\d{9}$/.test(registerPhone.value)) {
     showFailToast('请输入正确的手机号');
     return;
   }
-  
+
   if (!registerPassword.value || registerPassword.value.length < 8 || registerPassword.value.length > 20) {
     showFailToast('密码长度需在8-20位之间');
     return;
   }
-  
+
   if (!registerSmsCode.value) {
     showFailToast('请输入验证码');
     return;
   }
-  
+
   if (!agreed.value) {
     showFailToast('请先同意用户协议和隐私条款');
     return;
   }
-  
+
   try {
     isLoading.value = true;
-    
+
     const response = await axios.post(`${API_BASE_URL}/register`, {
       phone: registerPhone.value,
       password: registerPassword.value,
@@ -361,13 +291,13 @@ const handleRegister = async () => {
     // 注册成功处理
     const user = response.data;
     showSuccessToast('注册成功');
-    
+
     // 自动填充手机号到登录页
     loginAccount.value = registerPhone.value;
-    
+
     // 切换到登录页
     currentTab.value = 'login';
-    
+
   } catch (error) {
     // 从错误响应中提取真实错误消息
     const errorMessage = error.response?.data || error.message || '注册失败，请重试';
@@ -394,8 +324,8 @@ const handleForgotPassword = () => {
   background-color: #F0F7FF;
   padding: 20px;
   box-sizing: border-box;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, 
-              Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   display: flex;
   flex-direction: column;
 }
@@ -417,12 +347,12 @@ const handleForgotPassword = () => {
   transform: translateX(-50%);
   width: 200px;
   height: 200px;
-  background: 
+  background:
     radial-gradient(circle at 30% 30%, #3b82f6 10%, transparent 11%),
     radial-gradient(circle at 70% 40%, #1e40af 10%, transparent 11%),
     radial-gradient(circle at 30% 70%, #60a5fa 10%, transparent 11%);
   border-radius: 50%;
-  box-shadow: 
+  box-shadow:
     0 0 40px rgba(59, 130, 246, 0.4),
     inset 0 0 40px rgba(255, 255, 255, 0.6);
 }
@@ -438,7 +368,7 @@ const handleForgotPassword = () => {
   height: 60px;
   top: 10%;
   right: -30px;
-  box-shadow: 
+  box-shadow:
     -60px 30px 0 -25px rgba(255, 255, 255, 0.8),
     25px 5px 0 -10px rgba(255, 255, 255, 0.8);
 }
@@ -448,7 +378,7 @@ const handleForgotPassword = () => {
   height: 50px;
   top: 30%;
   left: -20px;
-  box-shadow: 
+  box-shadow:
     -40px 20px 0 -20px rgba(255, 255, 255, 0.8),
     20px 5px 0 -8px rgba(255, 255, 255, 0.8);
 }
@@ -573,6 +503,22 @@ const handleForgotPassword = () => {
   font-size: 16px;
   background-color: white;
   box-sizing: border-box;
+  color: #333 !important;
+  /* 深灰色确保可读性 */
+}
+
+/* 聚焦状态保持深色 */
+.input-field:focus {
+  color: #222 !important;
+  /* 更深的聚焦状态 */
+  border-color: #1E62FF;
+  /* 可添加聚焦边框 */
+}
+
+/* 设置placeholder颜色 */
+.input-field::placeholder {
+  color: #aaa !important;
+  /* 浅灰色提示文字 */
 }
 
 /* 短信输入框组 */
