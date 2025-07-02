@@ -65,17 +65,22 @@
           <p>点击上方按钮添加题目</p>
         </div>
 
-        <div v-for="(question, index) in questions" :key="question.id" class="question-item">
-          <div class="question-header">
-            <div class="question-type">{{ question.typeName }}</div>
-            <div class="question-index">Q{{ index + 1 }}.</div>
-          </div>
-          <div class="question-content">
-            {{ question.title }}
-          </div>
-          <div class="question-footer">
-            <van-icon name="edit" size="20" @click="editQuestion(question.id)" />
-            <van-icon name="delete" size="20" @click="deleteQuestion(question.id)" />
+        <div v-else>
+          <!-- 添加了题目列表视图 -->
+          <div class="list-header">已添加题目 ({{ questions.length }})</div>
+
+          <div v-for="(question, index) in questions" :key="question.id" class="question-item">
+            <div class="question-header">
+              <div class="question-type">{{ question.typeName }}</div>
+              <div class="question-index">Q{{ index + 1 }}.</div>
+            </div>
+            <div class="question-content">
+              {{ question.title }}
+            </div>
+            <div class="question-footer">
+              <van-icon name="edit" size="20" @click="editQuestion(question.id)" />
+              <van-icon name="delete" size="20" @click="deleteQuestion(question.id)" />
+            </div>
           </div>
         </div>
       </div>
@@ -135,9 +140,53 @@
       </div>
     </van-popup>
 
-    <!-- 题目编辑组件 -->
-    <question-editor v-if="showQuestionEditor" :question="currentQuestion" @save="saveQuestion"
-      @close="closeQuestionEditor" />
+    <!-- 题目编辑组件 - 简化版本 -->
+    <van-popup v-model:show="showQuestionEditor" position="right" class="question-editor-popup">
+      <div class="editor-header">
+        <van-icon name="arrow-left" @click="showQuestionEditor = false" />
+        <span>编辑题目</span>
+        <span></span> <!-- 占位 -->
+      </div>
+
+      <div class="editor-body">
+        <div class="field">
+          <label>题目类型</label>
+          <div class="type-badge">{{ currentQuestion.typeName }}</div>
+        </div>
+
+        <div class="field">
+          <label>题目标题</label>
+          <van-field v-model="currentQuestion.title" placeholder="请输入题目标题" />
+        </div>
+
+        <!-- 选项区域 -->
+        <div v-if="['single', 'multi', 'dropdown', 'rating', 'gender', 'age'].includes(currentQuestion.type)"
+          class="options-section">
+          <div class="options-header">
+            <label>选项设置</label>
+            <van-button size="small" @click="addOption">添加选项</van-button>
+          </div>
+
+          <div v-for="(option, idx) in currentQuestion.options" :key="idx" class="option-item">
+            <div class="option-left">
+              <span v-if="['single', 'multi', 'dropdown'].includes(currentQuestion.type)" class="option-radio">◯</span>
+              <span v-if="['rating', 'age', 'gender'].includes(currentQuestion.type)">{{ idx + 1 }}.</span>
+              <van-field v-model="option.text" placeholder="选项内容" />
+            </div>
+            <van-icon name="delete" @click="removeOption(idx)" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>是否必填</label>
+          <van-switch v-model="currentQuestion.required" size="24px" />
+        </div>
+      </div>
+
+      <div class="editor-footer">
+        <van-button block type="primary" @click="saveQuestion">保存题目</van-button>
+      </div>
+    </van-popup>
   </div>
 </template>
 
@@ -145,7 +194,6 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { Toast } from 'vant';
-import QuestionEditor from './QuestionEditor.vue';
 import { useRoute } from 'vue-router';
 
 const router = useRouter();
@@ -208,7 +256,8 @@ const showQuestionTypes = () => {
 
 const addDemographicQuestions = () => {
   // 添加基础信息题目
-  ['name', 'gender', 'age', 'region'].forEach(typeId => {
+  const demographicTypes = ['gender', 'age', 'name', 'region'];
+  demographicTypes.forEach(typeId => {
     const type = templateTypes.find(t => t.id === typeId);
     if (type) {
       createNewQuestion(type);
@@ -231,7 +280,8 @@ const createNewQuestion = (type) => {
     type: type.id,
     typeName: type.typeName || type.name,
     title: `请填写题目内容`,
-    required: true
+    required: true,
+    options: []
   };
 
   // 根据不同类型初始化数据结构
@@ -240,23 +290,53 @@ const createNewQuestion = (type) => {
       { id: 1, text: '选项一' },
       { id: 2, text: '选项二' }
     ];
-  } else if (type.id === 'dropdown') {
+  }
+  else if (type.id === 'dropdown') {
     baseQuestion.options = [
       { id: 1, text: '选项一' },
       { id: 2, text: '选项二' }
     ];
-  } else if (type.id === 'rating') {
-    baseQuestion.max = 5;
-    baseQuestion.label = '不满意,一般,满意';
-  } else if (type.id === 'gender') {
+  }
+  else if (type.id === 'rating') {
+    baseQuestion.options = [
+      { id: 1, text: '不满意' },
+      { id: 2, text: '一般' },
+      { id: 3, text: '满意' }
+    ];
+  }
+  else if (type.id === 'gender') {
+    baseQuestion.title = '您的性别是？';
     baseQuestion.options = [
       { id: 1, text: '男' },
       { id: 2, text: '女' }
     ];
   }
+  else if (type.id === 'age') {
+    baseQuestion.title = '您的年龄段是？';
+    baseQuestion.options = [
+      { id: 1, text: '18岁以下' },
+      { id: 2, text: '18-25岁' },
+      { id: 3, text: '26-35岁' },
+      { id: 4, text: '36-45岁' },
+      { id: 5, text: '46岁以上' }
+    ];
+  }
+  else if (type.id === 'region') {
+    baseQuestion.title = '您所在的地区是？';
+    baseQuestion.options = [
+      { id: 1, text: '北京' },
+      { id: 2, text: '上海' },
+      { id: 3, text: '广州' },
+      { id: 4, text: '深圳' },
+      { id: 5, text: '其他城市' }
+    ];
+  }
+  else if (type.id === 'name') {
+    baseQuestion.title = '您的姓名是？';
+    baseQuestion.typeName = '填空题';
+  }
 
   currentQuestion.value = baseQuestion;
-  showQuestionEditor.value = true;
 };
 
 const editQuestion = (id) => {
@@ -268,26 +348,42 @@ const editQuestion = (id) => {
 };
 
 const deleteQuestion = (id) => {
-  Toast('删除题目');
   questions.value = questions.value.filter(q => q.id !== id);
+  Toast('题目已删除');
 };
 
-const saveQuestion = (question) => {
-  if (question.id) {
-    // 更新现有题目
-    const index = questions.value.findIndex(q => q.id === question.id);
-    if (index !== -1) {
-      questions.value[index] = question;
-    }
+// 添加选项
+const addOption = () => {
+  const nextId = currentQuestion.value.options.length + 1;
+  currentQuestion.value.options.push({
+    id: nextId,
+    text: `选项${nextId}`
+  });
+};
+
+// 移除选项
+const removeOption = (index) => {
+  if (currentQuestion.value.options.length > 1) {
+    currentQuestion.value.options.splice(index, 1);
   } else {
-    // 添加新题目
-    question.id = questionIdCounter.value++;
-    questions.value.push(question);
+    Toast('至少保留一个选项');
   }
-  showQuestionEditor.value = false;
 };
 
-const closeQuestionEditor = () => {
+const saveQuestion = () => {
+  if (currentQuestion.value.id) {
+    const index = questions.value.findIndex(q => q.id === currentQuestion.value.id);
+    if (index !== -1) {
+      // 更新现有题目
+      questions.value[index] = { ...currentQuestion.value };
+      Toast('题目更新成功');
+    } else {
+      // 添加新题目
+      questions.value.push({ ...currentQuestion.value });
+      Toast('题目添加成功');
+    }
+  }
+
   showQuestionEditor.value = false;
 };
 
@@ -460,7 +556,7 @@ const saveSurvey = () => {
 .question-list {
   background-color: #fff;
   border-radius: 12px;
-  padding: 16px;
+  padding: 0 16px;
   min-height: 200px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
@@ -475,12 +571,21 @@ const saveSurvey = () => {
   margin-top: 10px;
 }
 
+.list-header {
+  padding: 12px 0;
+  font-weight: bold;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 12px;
+  color: #333;
+}
+
 .question-item {
   padding: 16px;
   margin-bottom: 16px;
   border-radius: 8px;
   background-color: #fafafa;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  position: relative;
 }
 
 .question-header {
@@ -514,6 +619,9 @@ const saveSurvey = () => {
   display: flex;
   justify-content: flex-end;
   gap: 20px;
+  padding-top: 10px;
+  border-top: 1px solid #f0f0f0;
+  color: #969799;
 }
 
 /* 底部导航 */
@@ -538,6 +646,99 @@ const saveSurvey = () => {
   color: #646566;
   font-size: 12px;
   cursor: pointer;
+  width: 25%;
+}
+
+/* 题目编辑器弹窗 */
+.question-editor-popup {
+  width: 100%;
+  height: 100%;
+  background-color: #f5f7fa;
+  display: flex;
+  flex-direction: column;
+}
+
+.editor-header {
+  height: 50px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 16px;
+  background-color: #fff;
+  border-bottom: 1px solid #eee;
+  font-weight: bold;
+  color: #1989fa;
+}
+
+.editor-body {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.field {
+  margin-bottom: 20px;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+}
+
+.type-badge {
+  background-color: #e8f4ff;
+  color: #1989fa;
+  padding: 6px 12px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.options-section {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 12px;
+}
+
+.options-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  color: #333;
+}
+
+.option-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+  color: #646566;
+}
+
+.option-item:last-child {
+  border-bottom: none;
+}
+
+.option-left {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  color: #333;
+}
+
+.option-radio {
+  margin-right: 8px;
+  min-width: 20px;
+}
+
+.editor-footer {
+  padding: 16px;
+  background-color: #fff;
+  border-top: 1px solid #eee;
 }
 
 /* 添加题目弹出层 */
