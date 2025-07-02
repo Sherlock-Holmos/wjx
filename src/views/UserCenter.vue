@@ -15,11 +15,11 @@
       <!-- 用户信息区 -->
       <div class="user-info-card">
         <div class="avatar-container">
-          <div class="avatar">用</div>
+          <div class="avatar">{{ avatarText }}</div>
         </div>
         <div class="user-details">
-          <div class="phone-number">19952404769</div>
-          <div class="account-id">账号ID: 81639322</div>
+          <div class="phone-number">{{ userName || phoneNumber }}</div>
+          <div class="account-id">账号ID: {{ userId || '----' }}</div>
         </div>
       </div>
 
@@ -30,13 +30,8 @@
           <span class="card-title">当前版本</span>
         </div>
         <div class="card-content">
-          <span class="version">免费版</span>
-          <van-button 
-            type="primary" 
-            size="small"
-            class="upgrade-btn"
-            @click="showUpgradeDialog"
-          >
+          <span class="version">{{ accountType }}</span>
+          <van-button type="primary" size="small" class="upgrade-btn" @click="showUpgradeDialog">
             升级到标准版
           </van-button>
         </div>
@@ -60,11 +55,11 @@
             <van-icon name="phone" size="20" color="#1989fa" />
             <span>手机号码</span>
           </div>
-          <div class="info-value">19952404769</div>
+          <div class="info-value">{{ phoneNumber || '----' }}</div>
         </div>
-        
+
         <van-divider />
-        
+
         <div class="info-row">
           <div class="info-label">
             <van-icon name="ai" size="20" color="#1989fa" />
@@ -72,9 +67,9 @@
           </div>
           <div class="info-value">30</div>
         </div>
-        
+
         <van-divider />
-        
+
         <div class="info-row">
           <div class="info-label">
             <van-icon name="eye" size="20" color="#1989fa" />
@@ -114,20 +109,98 @@
         <span class="agreement-link" @click="openAgreement('user')">《用户服务协议》</span>
         <span class="agreement-link" @click="openAgreement('privacy')">《隐私条款》</span>
       </div>
+
+      <!-- 未登录提示弹窗 -->
+      <van-dialog v-model:show="showNotLoginDialog" title="提示" message="您尚未登录，请先登录" show-cancel-button>
+        <template #confirm>
+          <span @click="goToLogin">去登录</span>
+        </template>
+      </van-dialog>
     </div>
   </div>
 </template>
 
 <script setup>
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { showToast, showDialog } from 'vant';
+import { showToast, showDialog, Dialog } from 'vant';
 
 const router = useRouter();
 
+// 用户数据
+const userData = ref(null);
+const showNotLoginDialog = ref(false);
+
+// 计算属性
+const userName = computed(() => {
+  return userData.value?.name || userData.value?.nickname || userData.value?.username;
+});
+
+const phoneNumber = computed(() => {
+  return userData.value?.phone || userData.value?.phoneNumber || userData.value?.username;
+});
+
+const userId = computed(() => {
+  return userData.value?.id || userData.value?.userId;
+});
+
+const accountType = computed(() => {
+  if (!userData.value) return '未登录';
+
+  switch (userData.value.accountType?.toUpperCase()) {
+    case 'PERSONAL': return '免费版';
+    case 'BUSINESS': return '企业试用版';
+    case 'PREMIUM': return '标准版';
+    default: return '免费版';
+  }
+});
+
+const avatarText = computed(() => {
+  if (!userData.value) return '未';
+
+  // 如果服务器提供了名称，使用名称首字符
+  if (userData.value.username) return userData.value.username.charAt(0);
+
+  // 否则尝试从手机号/用户名提取首字符
+  if (phoneNumber.value) return phoneNumber.value.charAt(0);
+
+  return '未';
+});
+
+// 加载用户数据
+const loadUserData = () => {
+  const userJson = localStorage.getItem('user');
+  try {
+    if (userJson) {
+      userData.value = JSON.parse(userJson);
+      console.log('用户数据加载成功:', userData.value);
+    } else {
+      console.log('未检测到用户登录信息');
+      // 延迟显示弹窗，防止页面闪烁
+      setTimeout(() => showNotLoginDialog.value = true, 500);
+    }
+  } catch (e) {
+    console.error('解析用户数据失败:', e);
+    showToast('用户信息异常，请重新登录');
+    localStorage.removeItem('user');
+    showNotLoginDialog.value = true;
+  }
+};
+
+// 跳转登录页面
+const goToLogin = () => {
+  router.push('/login');
+};
+
 const showUpgradeDialog = () => {
+  if (!userData.value) {
+    showNotLoginDialog.value = true;
+    return;
+  }
+
   showDialog({
     title: '升级会员',
-    message: '您确定要升级到标准版会员吗？',
+    message: `您确定要将 [${phoneNumber.value}] 升级到标准版会员吗？`,
     confirmButtonText: '立即升级',
   }).then(() => {
     showToast('正在升级到标准版...');
@@ -135,10 +208,18 @@ const showUpgradeDialog = () => {
 };
 
 const showAssistance = () => {
+  if (!userData.value) {
+    showNotLoginDialog.value = true;
+    return;
+  }
   showToast('申请协助功能已打开');
 };
 
 const openOnlineConsult = () => {
+  if (!userData.value) {
+    showNotLoginDialog.value = true;
+    return;
+  }
   showToast('在线咨询功能已打开');
 };
 
@@ -149,6 +230,19 @@ const openAgreement = (type) => {
   };
   showToast(`打开${agreementTypes[type]}`);
 };
+
+// 页面加载时初始化用户数据
+onMounted(() => {
+  loadUserData();
+
+  // 监听storage事件，实现多标签页同步
+  window.addEventListener('storage', (event) => {
+    if (event.key === 'user') {
+      console.log('检测到用户数据变更，重新加载用户信息');
+      loadUserData();
+    }
+  });
+});
 </script>
 
 <style scoped>
@@ -174,7 +268,7 @@ const openAgreement = (type) => {
   right: 0;
   height: 46px;
   background-color: #fff;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   z-index: 101;
 }
 
@@ -188,7 +282,8 @@ const openAgreement = (type) => {
 .content-container {
   flex: 1;
   padding: 20px 16px;
-  padding-top: 20px; /* 为导航栏留出空间 */
+  padding-top: 20px;
+  /* 为导航栏留出空间 */
   display: flex;
   flex-direction: column;
 }
@@ -201,7 +296,7 @@ const openAgreement = (type) => {
   background-color: #fff;
   border-radius: 16px;
   margin-bottom: 20px;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
 }
 
 .avatar-container .avatar {
@@ -241,7 +336,7 @@ const openAgreement = (type) => {
   border-radius: 16px;
   margin-bottom: 16px;
   padding: 20px;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
 }
 
 .card-header {
@@ -348,13 +443,13 @@ const openAgreement = (type) => {
   background-color: #fff;
   border-radius: 16px;
   padding: 28px 0;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
 }
 
 .service-button:hover {
   transform: translateY(-3px);
-  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
 
 .service-button span {
@@ -391,12 +486,14 @@ const openAgreement = (type) => {
     height: 64px;
     font-size: 28px;
   }
-  
+
   .phone-number {
     font-size: 18px;
   }
-  
-  .info-label, .info-value, .card-title {
+
+  .info-label,
+  .info-value,
+  .card-title {
     font-size: 16px;
   }
 }

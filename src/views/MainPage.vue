@@ -3,31 +3,16 @@
     <!-- 顶部导航栏 -->
     <van-nav-bar class="nav-bar" safe-area-inset-top>
       <template #left>
-        <van-icon 
-          name="wap-nav" 
-          size="24" 
-          class="menu-icon"
-          @click="toggleMenu"
-        />
+        <van-icon name="wap-nav" size="24" class="menu-icon" @click="toggleMenu" />
       </template>
-      
+
       <template #title>
-        <van-search
-          v-model="searchValue"
-          shape="round"
-          background="transparent"
-          placeholder="搜索问卷"
-          readonly
-          @click="handleSearchClick"
-        />
+        <van-search v-model="searchValue" shape="round" background="transparent" placeholder="搜索问卷" readonly
+          @click="handleSearchClick" />
       </template>
-      
+
       <template #right>
-        <van-button 
-          size="small" 
-          type="primary"
-          @click="handleCreateClick"
-        >
+        <van-button size="small" type="primary" @click="handleCreateClick">
           创建
         </van-button>
       </template>
@@ -79,21 +64,17 @@
             <div class="greeting">你好 调查</div>
             <div class="status-tag">未发布</div>
           </div>
-          
+
           <div class="response-count">
             <div class="count">0</div>
             <div class="label">答卷数量</div>
           </div>
         </div>
-        
+
         <div class="questionnaire-management">
           <!-- 问卷列表占位符 -->
           <div class="empty-prompt">
-            <van-image
-              width="80"
-              height="80"
-              src="/src/assets/empty.png"
-            />
+            <van-image width="80" height="80" src="/src/assets/empty.png" />
             <p class="empty-text">暂无问卷数据</p>
           </div>
         </div>
@@ -124,12 +105,7 @@
         </div>
 
         <!-- 创建按钮 -->
-        <van-button 
-          type="primary" 
-          block
-          class="create-btn"
-          @click="handleCreateClick"
-        >
+        <van-button type="primary" block class="create-btn" @click="handleCreateClick">
           创建新问卷
         </van-button>
       </div>
@@ -184,7 +160,7 @@ const handleSearchClick = () => {
 const handleCreateClick = () => {
   closeMenu();
   router.push({ name: 'SelectScenario' });
-  
+
   // 创建新问卷后更新状态
   hasCreated.value = true;
 };
@@ -213,6 +189,8 @@ const menuAction = (action) => {
     case 'logout':
       // 退出时重置状态
       hasCreated.value = false;
+      localStorage.removeItem('user');
+      router.push({ name: 'RegisterPage' });
       console.log('退出登录');
       break;
     default:
@@ -240,7 +218,7 @@ const menuAction = (action) => {
 /* 导航栏样式 */
 .nav-bar {
   background-color: #fff;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   position: relative;
   z-index: 110;
 }
@@ -253,12 +231,13 @@ const menuAction = (action) => {
 /* 下拉菜单样式 */
 .dropdown-menu {
   position: absolute;
-  top: 46px; /* 导航栏高度 */
+  top: 46px;
+  /* 导航栏高度 */
   left: 0;
   width: 100%;
   background: white;
   border-radius: 0 0 12px 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   z-index: 120;
   padding: 8px 0;
   overflow: hidden;
@@ -287,10 +266,13 @@ const menuAction = (action) => {
 }
 
 /* 下拉动画 */
-.slide-down-enter-active, .slide-down-leave-active {
+.slide-down-enter-active,
+.slide-down-leave-active {
   transition: all 0.3s ease;
 }
-.slide-down-enter-from, .slide-down-leave-to {
+
+.slide-down-enter-from,
+.slide-down-leave-to {
   transform: translateY(-20px);
   opacity: 0;
 }
@@ -316,7 +298,7 @@ const menuAction = (action) => {
   background: #fff;
   border-radius: 12px;
   padding: 16px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -363,7 +345,7 @@ const menuAction = (action) => {
   background: #fff;
   border-radius: 12px;
   padding: 24px 16px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   margin-bottom: 15px;
   flex: 1;
   display: flex;
@@ -386,7 +368,7 @@ const menuAction = (action) => {
   background: #fff;
   border-radius: 16px;
   padding: 24px 16px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
   margin-top: 15px;
 }
 

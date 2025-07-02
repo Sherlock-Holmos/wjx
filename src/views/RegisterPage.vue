@@ -145,8 +145,10 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { showToast, showSuccessToast, showFailToast, Loading as VanLoading } from 'vant';
 import axios from 'axios';
+import { useStore } from 'vuex';
 
 const router = useRouter();
+const store = useStore();
 
 // API基础地址
 const API_BASE_URL = 'http://localhost:8080/api/auth';
@@ -218,6 +220,11 @@ const handleLogin = async () => {
         return;
       }
 
+      if (!agreed.value) {
+        showFailToast('请先同意用户协议和隐私条款');
+        return;
+      }
+
       response = await axios.post(`${API_BASE_URL}/login/password`, {
         phoneOrUsername: loginAccount.value,
         password: loginPassword.value
@@ -233,6 +240,11 @@ const handleLogin = async () => {
         return;
       }
 
+      if (!agreed.value) {
+        showFailToast('请先同意用户协议和隐私条款');
+        return;
+      }
+
       response = await axios.post(`${API_BASE_URL}/login/sms`, {
         phone: loginAccount.value
       });
@@ -243,6 +255,7 @@ const handleLogin = async () => {
     localStorage.setItem('user', JSON.stringify(user));
 
     showSuccessToast('登录成功');
+
     router.push({ name: 'MainPage' });
 
   } catch (error) {
