@@ -1,7 +1,7 @@
 <template>
   <div class="main-page">
     <!-- 顶部导航栏 -->
-    <van-nav-bar class="nav-bar" safe-area-inset-top>
+    <van-nav-bar class="nav-bar" safe-area-inset-top fixed>
       <template #left>
         <van-icon name="wap-nav" size="24" class="menu-icon" @click="toggleMenu" />
       </template>
@@ -57,31 +57,48 @@
 
     <!-- 主内容区 -->
     <div class="content-section">
-      <!-- 用户信息展示（有问卷时显示） -->
-      <template v-if="hasCreated">
-        <div class="user-info-section">
-          <div class="user-info-wrapper">
-            <div class="greeting">你好 调查</div>
-            <div class="status-tag">未发布</div>
+      <!-- 用户信息展示 -->
+      <div v-if="hasSurveys" class="user-greeting">
+        <div class="greeting">{{ greetingMessage }}</div>
+      </div>
+
+      <!-- 问卷列表 -->
+      <div v-if="hasSurveys" class="survey-list">
+        <div v-for="survey in surveys" :key="survey.id" class="survey-card">
+          <div class="card-header">
+            <div class="survey-title">{{ survey.title }}</div>
+            <div :class="statusClass(survey.status)">{{ surveyStatusText(survey.status) }}</div>
           </div>
 
-          <div class="response-count">
-            <div class="count">0</div>
-            <div class="label">答卷数量</div>
-          </div>
-        </div>
+          <div class="card-content">
+            <div class="time-section">
+              <div class="time">{{ formatTime(survey.createdAt) }}</div>
+              <div class="date">{{ formatDate(survey.createdAt) }}</div>
+            </div>
 
-        <div class="questionnaire-management">
-          <!-- 问卷列表占位符 -->
-          <div class="empty-prompt">
-            <van-image width="80" height="80" src="/src/assets/empty.png" />
-            <p class="empty-text">暂无问卷数据</p>
+            <div class="info-section">
+              <div class="question-count">{{ survey.questions.length }} 题</div>
+              <div class="actions">
+                <van-button v-if="survey.status === 'DRAFT'" class="action-button" size="small"
+                  @click="publishSurvey(survey.id)">
+                  发布
+                </van-button>
+
+                <van-button plain class="action-button outline" size="small" @click="previewSurvey(survey.id)">
+                  预览
+                </van-button>
+
+                <van-button plain class="action-button outline" size="small" @click="editSurvey(survey.id)">
+                  编辑
+                </van-button>
+              </div>
+            </div>
           </div>
         </div>
-      </template>
+      </div>
 
       <!-- 创建流程卡片（无问卷时显示） -->
-      <div v-if="!hasCreated" class="creation-card">
+      <div v-else class="creation-card">
         <!-- 步骤指示器 -->
         <div class="steps">
           <div class="step">
@@ -110,39 +127,146 @@
         </van-button>
       </div>
 
-      <!-- 售前咨询链接 -->
-      <div class="consultation-link">
-        <van-icon name="service" class="consult-icon" />
-        <span>售前咨询</span>
-      </div>
+      <!-- 底部内容 -->
+      <div class="footer-content">
+        <div class="consultation-link">
+          <van-icon name="service" class="consult-icon" />
+          <span>售前咨询</span>
+        </div>
 
-      <!-- 底部提示 -->
-      <div class="footer-tip">
-        绑定问卷星微信，第一时间获取答卷提醒
+        <div class="footer-tip">
+          绑定问卷星微信，第一时间获取答卷提醒
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
-// import { getMyQuestionnaires } from '@/api/questionnaire'; // API调用
+import axios from 'axios';
+import dayjs from 'dayjs';
 
 const router = useRouter();
 const searchValue = ref('');
 const isMenuOpen = ref(false);
-const hasCreated = ref(false); // 标记用户是否创建过问卷
+const surveys = ref([]);
+const userId = ref(null);
 
-// onMounted(() => {
-//   // 获取问卷数据
-//   getMyQuestionnaires().then(response => {
-//     // 根据返回结果判断用户是否创建过问卷
-//     hasCreated.value = response.data && response.data.length > 0;
-//   }).catch(error => {
-//     console.error('获取问卷列表失败', error);
-//   });
-// });
+// 创建 axios 实例
+const api = axios.create({
+  baseURL: 'http://localhost:8080',
+  timeout: 10000,
+  withCredentials: true
+});
+
+// 从 localStorage 获取用户信息
+const getUser = () => {
+  const userData = localStorage.getItem('user');
+  if (userData) {
+    return JSON.parse(userData);
+  }
+  return null;
+};
+
+// 计算属性 - 是否有问卷
+const hasSurveys = computed(() => {
+  return surveys.value && surveys.value.length > 0;
+});
+
+// 计算属性 - 问候语
+const greetingMessage = computed(() => {
+  const user = getUser();
+  if (user && user.username) {
+    return `你好 ${user.username}`;
+  }
+  return '你好';
+});
+
+// 格式化日期
+const formatDate = (dateString) => {
+  return dayjs(dateString).format('YYYY-MM-DD');
+};
+
+// 格式化时间
+const formatTime = (dateString) => {
+  return dayjs(dateString).format('HH:mm');
+};
+
+// 获取问卷状态文本
+const surveyStatusText = (status) => {
+  switch (status) {
+    case 'DRAFT': return '草稿';
+    case 'PUBLISHED': return '已发布';
+    case 'CLOSED': return '已结束';
+    case 'ARCHIVED': return '已归档';
+    default: return '未知状态';
+  }
+};
+
+// 问卷状态对应的样式类
+const statusClass = (status) => {
+  const baseClass = 'status-tag';
+  switch (status) {
+    case 'DRAFT': return `${baseClass} status-draft`;
+    default: return baseClass;
+  }
+};
+
+// 获取用户问卷
+const fetchUserSurveys = async () => {
+  try {
+    const user = getUser();
+    if (!user || !user.id) return;
+
+    const response = await api.get('/api/surveys/my', {
+      params: {
+        userId: user.id
+      }
+    });
+
+    if (response.data && Array.isArray(response.data)) {
+      surveys.value = response.data;
+    }
+  } catch (error) {
+    console.error('获取问卷列表失败:', error);
+  }
+};
+
+// 发布问卷
+const publishSurvey = async (surveyId) => {
+  try {
+    await api.put(`/api/surveys/${surveyId}/publish`);
+    fetchUserSurveys(); // 刷新列表
+  } catch (error) {
+    console.error('发布问卷失败:', error);
+  }
+};
+
+// 预览问卷
+const previewSurvey = (surveyId) => {
+  router.push({ name: 'SurveyPreview', params: { id: surveyId } });
+};
+
+// 编辑问卷
+const editSurvey = (surveyId) => {
+  router.push({ name: 'SurveyEditor', params: { id: surveyId } });
+};
+
+onMounted(() => {
+  // 检查用户是否登录
+  const user = getUser();
+  if (!user) {
+    router.push({ name: 'LoginPage' });
+    return;
+  }
+
+  userId.value = user.id;
+
+  // 获取用户问卷
+  fetchUserSurveys();
+});
 
 const toggleMenu = () => {
   isMenuOpen.value = !isMenuOpen.value;
@@ -159,10 +283,7 @@ const handleSearchClick = () => {
 
 const handleCreateClick = () => {
   closeMenu();
-  router.push({ name: 'SelectScenario' });
-
-  // 创建新问卷后更新状态
-  hasCreated.value = true;
+  router.push({ name: 'CreateQuestionnaire' });
 };
 
 const menuAction = (action) => {
@@ -187,11 +308,8 @@ const menuAction = (action) => {
       router.push({ name: 'Analysis' });
       break;
     case 'logout':
-      // 退出时重置状态
-      hasCreated.value = false;
       localStorage.removeItem('user');
       router.push({ name: 'RegisterPage' });
-      console.log('退出登录');
       break;
     default:
       console.warn('未知操作:', action);
@@ -200,7 +318,7 @@ const menuAction = (action) => {
 </script>
 
 <style scoped>
-/* 整体容器 - 全屏页面 */
+/* 整体容器 */
 .main-page {
   position: fixed;
   top: 0;
@@ -208,31 +326,238 @@ const menuAction = (action) => {
   width: 100%;
   height: 100%;
   background-color: #f5f7fa;
-  color: #333;
   display: flex;
   flex-direction: column;
-  z-index: 100;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
   overflow: auto;
 }
 
-/* 导航栏样式 */
 .nav-bar {
   background-color: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
   position: relative;
-  z-index: 110;
+  z-index: 100;
 }
 
 .menu-icon {
   color: #1989fa;
-  cursor: pointer;
+}
+
+.content-section {
+  flex: 1;
+  padding: 16px;
+  padding-top: 60px;
+  /* 导航栏高度 */
+  display: flex;
+  flex-direction: column;
+}
+
+.user-greeting {
+  padding: 16px 0;
+  margin-bottom: 16px;
+}
+
+.greeting {
+  font-size: 22px;
+  font-weight: 500;
+  color: #333;
+}
+
+.survey-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.survey-card {
+  background-color: #fff;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  position: relative;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.survey-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+}
+
+.status-tag {
+  font-size: 14px;
+  color: #666;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.status-draft {
+  background-color: #e6f7ff;
+  color: #1890ff;
+}
+
+.card-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.time-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.time {
+  font-size: 20px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.date {
+  font-size: 14px;
+  color: #666;
+}
+
+.info-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.question-count {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-button {
+  padding: 0 15px;
+  height: 32px;
+  border-radius: 16px;
+  font-weight: 500;
+}
+
+.action-button.outline {
+  background-color: transparent;
+  border: 1px solid #1989fa;
+  color: #1989fa;
+}
+
+.footer-content {
+  margin-top: auto;
+  padding-top: 20px;
+  text-align: center;
+}
+
+.consultation-link {
+  display: inline-flex;
+  align-items: center;
+  color: #1989fa;
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+
+.consult-icon {
+  margin-right: 6px;
+  font-size: 18px;
+}
+
+.footer-tip {
+  font-size: 13px;
+  color: #999;
+  padding-bottom: 10px;
+}
+
+/* 创建卡片样式 */
+.creation-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+  margin-top: 15px;
+}
+
+.steps {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 30px;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.step-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #f5f7fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: #969799;
+  margin-bottom: 8px;
+  border: 1px solid #ebedf0;
+  font-size: 16px;
+}
+
+.step-label {
+  font-size: 14px;
+  color: #646566;
+  text-align: center;
+  font-weight: 500;
+}
+
+.title-section {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.main-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 12px;
+}
+
+.sub-title {
+  font-size: 15px;
+  color: #666;
+  line-height: 1.5;
+}
+
+.create-btn {
+  border-radius: 30px;
+  height: 48px;
+  font-weight: 600;
+  font-size: 16px;
 }
 
 /* 下拉菜单样式 */
 .dropdown-menu {
   position: absolute;
   top: 46px;
-  /* 导航栏高度 */
   left: 0;
   width: 100%;
   background: white;
@@ -281,181 +606,5 @@ const menuAction = (action) => {
 .menu-overlay {
   z-index: 105;
   background-color: rgba(0, 0, 0, 0.5);
-}
-
-/* 主内容区 */
-.content-section {
-  flex: 1;
-  padding: 20px 16px;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  z-index: 100;
-}
-
-/* 用户信息区域 */
-.user-info-section {
-  background: #fff;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-}
-
-.user-info-wrapper {
-  display: flex;
-  align-items: center;
-}
-
-.greeting {
-  font-size: 18px;
-  font-weight: 500;
-  color: #333;
-}
-
-.status-tag {
-  margin-left: 8px;
-  background: #f0f7ff;
-  color: #1989fa;
-  padding: 4px 10px;
-  border-radius: 14px;
-  font-size: 12px;
-}
-
-.response-count {
-  text-align: center;
-}
-
-.response-count .count {
-  font-size: 24px;
-  font-weight: 700;
-  color: #333;
-}
-
-.response-count .label {
-  font-size: 12px;
-  color: #969799;
-}
-
-/* 问卷管理区域 */
-.questionnaire-management {
-  background: #fff;
-  border-radius: 12px;
-  padding: 24px 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-  margin-bottom: 15px;
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.empty-prompt {
-  text-align: center;
-}
-
-.empty-text {
-  font-size: 16px;
-  color: #969799;
-  margin-top: 12px;
-}
-
-/* 创建卡片 */
-.creation-card {
-  background: #fff;
-  border-radius: 16px;
-  padding: 24px 16px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
-  margin-top: 15px;
-}
-
-/* 步骤指示器 */
-.steps {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 30px;
-}
-
-.step {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.step-circle {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: #f5f7fa;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  color: #969799;
-  margin-bottom: 8px;
-  border: 1px solid #ebedf0;
-  font-size: 16px;
-}
-
-.step-label {
-  font-size: 14px;
-  color: #646566;
-  text-align: center;
-  font-weight: 500;
-}
-
-/* 标题区域 */
-.title-section {
-  text-align: center;
-  margin-bottom: 24px;
-}
-
-.main-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: #333;
-  margin-bottom: 12px;
-}
-
-.sub-title {
-  font-size: 15px;
-  color: #666;
-  line-height: 1.5;
-}
-
-/* 按钮样式 */
-.create-btn {
-  border-radius: 30px;
-  height: 48px;
-  font-weight: 600;
-  font-size: 16px;
-}
-
-/* 售前咨询 */
-.consultation-link {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 24px 0;
-  color: #1989fa;
-  font-size: 15px;
-  font-weight: 500;
-}
-
-.consult-icon {
-  margin-right: 6px;
-  font-size: 18px;
-}
-
-/* 底部提示 */
-.footer-tip {
-  text-align: center;
-  font-size: 13px;
-  color: #999;
-  margin-top: auto;
-  padding-bottom: 20px;
 }
 </style>
