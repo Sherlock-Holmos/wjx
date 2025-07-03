@@ -496,7 +496,7 @@ const menuAction = (action) => {
       router.push({ name: 'Recycle' });
       break;
     case 'analysis':
-      router.push({ name: 'Analysis' });
+      router.push({ name: 'AnalysisPage' });
       break;
     case 'logout':
       localStorage.removeItem('user');
