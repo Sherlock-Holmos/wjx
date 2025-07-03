@@ -66,7 +66,9 @@
       <div v-if="hasSurveys" class="survey-list">
         <div v-for="survey in surveys" :key="survey.id" class="survey-card">
           <div class="card-header">
-            <div class="survey-title">{{ survey.title }}</div>
+            <div class="survey-title">{{ survey.title }}<div class="fill-hint" v-if="survey.status === 'PUBLISHED'">点击填写
+              </div>
+            </div>
             <div :class="statusClass(survey.status)">{{ surveyStatusText(survey.status) }}</div>
           </div>
 
@@ -84,12 +86,22 @@
                   发布
                 </van-button>
 
-                <van-button plain class="action-button outline" size="small" @click="previewSurvey(survey.id)">
-                  预览
-                </van-button>
+                <!-- 草稿状态下的操作按钮 -->
+                <template v-if="survey.status === 'DRAFT'">
+                  <van-button plain class="action-button outline" size="small" @click="previewSurvey(survey.id)">
+                    预览
+                  </van-button>
 
-                <van-button plain class="action-button outline" size="small" @click="editSurvey(survey.id)">
-                  编辑
+                  <van-button plain class="action-button outline" size="small" @click="editSurvey(survey.id)">
+                    编辑
+                  </van-button>
+                </template>
+
+                <!-- 已发布状态下的分享按钮 -->
+                <van-button v-if="survey.status === 'PUBLISHED'" plain class="action-button share-btn" size="small"
+                  @click="openShareModal(survey.id)">
+                  <van-icon name="share" size="16" />
+                  分享
                 </van-button>
               </div>
             </div>
@@ -139,6 +151,57 @@
         </div>
       </div>
     </div>
+
+    <!-- 问卷状态提示弹窗 -->
+    <van-dialog v-model:show="showStatusDialog" :title="dialogTitle">
+      <div class="dialog-content">
+        {{ dialogMessage }}
+      </div>
+      <template #footer>
+        <van-button round block type="primary" @click="showStatusDialog = false">确认</van-button>
+      </template>
+    </van-dialog>
+
+    <!-- 分享模态框 -->
+    <van-dialog v-model:show="showShareDialog" :title="`分享问卷 - ${currentSurveyTitle}`" class="share-dialog">
+      <div class="dialog-content share-content">
+        <div class="share-title">问卷填写链接：</div>
+        <div class="url-container">
+          <div class="survey-url">{{ shareUrl }}</div>
+          <van-button class="copy-btn" size="small" type="primary" @click="copyToClipboard">
+            复制链接
+          </van-button>
+        </div>
+        <div class="share-title" style="margin-top: 24px">分享到：</div>
+        <div class="share-icons">
+          <div class="icon-item" @click="shareTo('wechat')">
+            <div class="icon-circle bg-wechat">
+              <van-icon name="wechat" size="28" color="white" />
+            </div>
+            <div class="icon-label">微信</div>
+          </div>
+          <div class="icon-item" @click="shareTo('qq')">
+            <div class="icon-circle bg-qq">
+              <van-icon name="qq" size="28" color="white" />
+            </div>
+            <div class="icon-label">QQ</div>
+          </div>
+          <div class="icon-item" @click="shareTo('weibo')">
+            <div class="icon-circle bg-weibo">
+              <van-icon name="weibo" size="28" color="white" />
+            </div>
+            <div class="icon-label">微博</div>
+          </div>
+          <div class="icon-item" @click="shareTo('qrcode')">
+            <div class="icon-circle bg-primary">
+              <van-icon name="qr" size="28" color="white" />
+            </div>
+            <div class="icon-label">二维码</div>
+          </div>
+        </div>
+        <div v-if="isCopied" class="copy-message">链接已复制到剪贴板！</div>
+      </div>
+    </van-dialog>
   </div>
 </template>
 
@@ -153,6 +216,16 @@ const searchValue = ref('');
 const isMenuOpen = ref(false);
 const surveys = ref([]);
 const userId = ref(null);
+
+const showStatusDialog = ref(false);
+const dialogTitle = ref('');
+const dialogMessage = ref('');
+
+// 分享相关状态
+const showShareDialog = ref(false);
+const shareUrl = ref('');
+const currentSurveyTitle = ref('');
+const isCopied = ref(false);
 
 // 创建 axios 实例
 const api = axios.create({
@@ -210,6 +283,7 @@ const statusClass = (status) => {
   const baseClass = 'status-tag';
   switch (status) {
     case 'DRAFT': return `${baseClass} status-draft`;
+    case 'PUBLISHED': return `${baseClass} status-published`;
     default: return baseClass;
   }
 };
@@ -239,6 +313,11 @@ const publishSurvey = async (surveyId) => {
   try {
     await api.put(`/api/surveys/${surveyId}/publish`);
     fetchUserSurveys(); // 刷新列表
+    // 发布后直接打开分享模态框
+    const publishedSurvey = surveys.value.find(s => s.id === surveyId);
+    if (publishedSurvey) {
+      openShareModal(surveyId);
+    }
   } catch (error) {
     console.error('发布问卷失败:', error);
   }
@@ -254,6 +333,34 @@ const editSurvey = (surveyId) => {
   router.push({ name: 'SurveyEditor', params: { id: surveyId } });
 };
 
+// 打开分享模态框
+const openShareModal = (surveyId) => {
+  const survey = surveys.value.find(s => s.id === surveyId);
+  if (survey && survey.status === 'PUBLISHED') {
+    currentSurveyTitle.value = survey.title;
+    // 生成问卷分享链接（实际开发中应使用后端API获取）
+    shareUrl.value = `${window.location.origin}/survey-answer/${surveyId}`;
+    isCopied.value = false;
+    showShareDialog.value = true;
+  }
+};
+
+// 复制到剪贴板
+const copyToClipboard = () => {
+  navigator.clipboard.writeText(shareUrl.value).then(() => {
+    isCopied.value = true;
+    setTimeout(() => {
+      isCopied.value = false;
+    }, 2000);
+  });
+};
+
+// 分享到不同平台
+const shareTo = (platform) => {
+  // 实际应用中应调用各个平台的分享API
+  alert(`分享问卷到${platform}`);
+};
+
 onMounted(() => {
   // 检查用户是否登录
   const user = getUser();
@@ -267,6 +374,34 @@ onMounted(() => {
   // 获取用户问卷
   fetchUserSurveys();
 });
+
+// 跳转到问卷填写页面
+const goToSurveyFill = (surveyId, status) => {
+  // 检查问卷状态
+  if (status === 'PUBLISHED') {
+    router.push({ name: 'SurveyAnswer', params: { id: surveyId } });
+  } else {
+    // 显示状态提示
+    switch (status) {
+      case 'DRAFT':
+        dialogTitle.value = '问卷尚未发布';
+        dialogMessage.value = '该问卷还在编辑中，请等待发布后再填写';
+        break;
+      case 'CLOSED':
+        dialogTitle.value = '问卷已结束';
+        dialogMessage.value = '该问卷已截止收集，不能再填写';
+        break;
+      case 'ARCHIVED':
+        dialogTitle.value = '问卷已归档';
+        dialogMessage.value = '该问卷已经归档，暂不开放填写';
+        break;
+      default:
+        dialogTitle.value = '问卷状态异常';
+        dialogMessage.value = '当前问卷状态不支持填写';
+    }
+    showStatusDialog.value = true;
+  }
+};
 
 const toggleMenu = () => {
   isMenuOpen.value = !isMenuOpen.value;
@@ -406,6 +541,11 @@ const menuAction = (action) => {
   color: #1890ff;
 }
 
+.status-published {
+  background-color: #f0fff4;
+  color: #52c41a;
+}
+
 .card-content {
   display: flex;
   justify-content: space-between;
@@ -458,6 +598,12 @@ const menuAction = (action) => {
   background-color: transparent;
   border: 1px solid #1989fa;
   color: #1989fa;
+}
+
+.action-button.share-btn {
+  background-color: #f0f7ff;
+  color: #1989fa;
+  border: 1px solid #c6e2ff;
 }
 
 .footer-content {
@@ -606,5 +752,170 @@ const menuAction = (action) => {
 .menu-overlay {
   z-index: 105;
   background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* 新增标题点击样式 */
+.survey-title {
+  position: relative;
+  max-width: 70%;
+}
+
+.title-clickable {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding-right: 20px;
+}
+
+.title-clickable:hover {
+  color: #1989fa;
+}
+
+.title-clickable:hover .fill-hint {
+  opacity: 1;
+}
+
+.fill-hint {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #1989fa;
+  background: rgba(25, 137, 250, 0.08);
+  padding: 2px 8px;
+  border-radius: 10px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+/* 弹窗内容样式 */
+.dialog-content {
+  padding: 20px;
+  text-align: center;
+  font-size: 16px;
+  color: #333;
+}
+
+/* 分享弹窗样式 */
+.share-dialog {
+  border-radius: 16px;
+  overflow: hidden;
+
+  .van-dialog__header {
+    padding-top: 16px;
+    font-weight: 600;
+    color: #333;
+  }
+
+  .share-content {
+    padding: 16px;
+    text-align: left;
+  }
+
+  .share-title {
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: #333;
+  }
+
+  .url-container {
+    display: flex;
+    align-items: center;
+    background: #f9f9f9;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    padding: 10px 16px;
+    margin-bottom: 8px;
+  }
+
+  .survey-url {
+    flex: 1;
+    font-size: 14px;
+    color: #1989fa;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .copy-btn {
+    margin-left: 10px;
+    border-radius: 8px;
+    font-weight: 500;
+  }
+
+  .share-icons {
+    display: flex;
+    justify-content: space-between;
+    padding: 16px 24px;
+
+    .icon-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      transition: transform 0.2s;
+
+      &:hover {
+        transform: scale(1.05);
+      }
+    }
+
+    .icon-circle {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+
+    .bg-wechat {
+      background-color: #07c160;
+    }
+
+    .bg-qq {
+      background-color: #12b7f5;
+    }
+
+    .bg-weibo {
+      background-color: #e6162d;
+    }
+
+    .bg-primary {
+      background-color: #1989fa;
+    }
+
+    .icon-label {
+      font-size: 13px;
+      color: #666;
+    }
+  }
+
+  .copy-message {
+    margin-top: 12px;
+    text-align: center;
+    font-size: 14px;
+    color: #07c160;
+    animation: fade 2s;
+  }
+}
+
+@keyframes fade {
+  0% {
+    opacity: 0;
+  }
+
+  20% {
+    opacity: 1;
+  }
+
+  80% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
 }
 </style>

@@ -46,6 +46,11 @@ const routes = [
     name: 'SurveyPreview',
     component: () => import('@/views/SurveyPreviewPage.vue'),
   },
+  {
+    path: '/survey-answer/:id',
+    name: 'SurveyAnswer',
+    component: () => import('@/views/SurveyAnswerPage.vue'),
+  },
 ]
 
 const router = createRouter({

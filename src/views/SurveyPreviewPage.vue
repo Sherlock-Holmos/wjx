@@ -45,7 +45,7 @@
                         </div>
 
                         <!-- 单选题 -->
-                        <div v-if="question.type === 'SINGLE_SELECT'" class="options-container">
+                        <div v-if="question.type === 'single'" class="options-container">
                             <van-radio-group v-model="questionAnswers[question.id]">
                                 <van-cell-group>
                                     <van-cell v-for="option in question.options" :key="option.id" clickable
@@ -59,7 +59,7 @@
                         </div>
 
                         <!-- 多选题 -->
-                        <div v-if="question.type === 'MULTI_SELECT'" class="options-container">
+                        <div v-if="question.type === 'multi'" class="options-container">
                             <van-checkbox-group v-model="questionAnswers[question.id]">
                                 <van-cell-group>
                                     <van-cell v-for="option in question.options" :key="option.id" clickable
@@ -73,14 +73,14 @@
                         </div>
 
                         <!-- 文本题 -->
-                        <div v-if="question.type === 'TEXT'" class="text-container">
+                        <div v-if="question.type === 'fill'" class="text-container">
                             <van-field v-model="questionAnswers[question.id]" rows="3" autosize type="textarea"
                                 placeholder="请输入您的回答..." :maxlength="question.maxLength || 500" show-word-limit
                                 class="textarea" />
                         </div>
 
                         <!-- 评分题 -->
-                        <div v-if="question.type === 'RATING'" class="rating-container">
+                        <div v-if="question.type === 'rating'" class="rating-container">
                             <van-rate v-model="questionAnswers[question.id]" :count="question.maxRating || 5"
                                 :gutter="15" :size="28" color="#1989fa" void-color="#c8c9cc" />
                             <div class="rating-labels">
@@ -89,14 +89,6 @@
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <!-- 提交按钮 -->
-                <div class="submit-container">
-                    <van-button round block type="primary" class="submit-btn" :loading="submitting"
-                        @click="showPreviewTip">
-                        提交问卷
-                    </van-button>
                 </div>
             </div>
         </div>
@@ -132,7 +124,7 @@ const loadSurveyPreview = async () => {
         loading.value = true;
         error.value = false;
 
-        const response = await api.get(`/api/surveys/${surveyId}/preview`);
+        const response = await api.get(`/api/survey-answer/${surveyId}`);
 
         if (response.data) {
             surveyData.value = response.data;
@@ -156,16 +148,16 @@ const initAnswersStructure = () => {
 
     surveyData.value.questions.forEach(question => {
         switch (question.type) {
-            case 'SINGLE_SELECT':
+            case 'single':
                 questionAnswers.value[question.id] = '';
                 break;
-            case 'MULTI_SELECT':
+            case 'muti':
                 questionAnswers.value[question.id] = [];
                 break;
-            case 'TEXT':
+            case 'fill':
                 questionAnswers.value[question.id] = '';
                 break;
-            case 'RATING':
+            case 'rating':
                 questionAnswers.value[question.id] = 0;
                 break;
             default:
