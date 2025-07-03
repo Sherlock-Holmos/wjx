@@ -1,7 +1,10 @@
 <template>
   <div class="create-survey-page">
-    <!-- 顶部导航栏 -->
+    <!-- 顶部导航栏 - 添加了返回按钮 -->
     <van-nav-bar safe-area-inset-top fixed>
+      <template #left>
+        <van-icon name="arrow-left" size="20" class="back-icon" @click="handleBack" />
+      </template>
       <template #title>
         <div class="nav-title">创建问卷</div>
       </template>
@@ -89,8 +92,8 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue';
-import { NavBar, DropdownMenu, DropdownItem, Search, Tab, Tabs, Popup, Button, Icon } from 'vant';
 import { useRouter } from 'vue-router';
+import { NavBar, DropdownMenu, DropdownItem, Search, Tab, Tabs, Popup, Button, Icon } from 'vant';
 
 const surveyTitle = ref('');
 const activeType = ref('all');
@@ -156,14 +159,17 @@ const createBlankSurvey = () => {
   if (!surveyTitle.value.trim()) {
     surveyTitle.value = '未命名问卷';
   }
-  console.log('创建空白问卷:', surveyTitle.value);
-  // 这里可以添加跳转到问卷编辑页面的逻辑
   router.push({ name: 'QuestionnaireSet', query: { title: surveyTitle.value } });
 };
 
 // 使用模板
 const useTemplate = (template) => {
   console.log('使用模板:', template.title);
+};
+
+// 处理返回操作
+const handleBack = () => {
+  router.back();
 };
 
 // 监听键盘显示/隐藏
@@ -203,6 +209,12 @@ watch(showKeyboard, (value) => {
   font-size: 17px;
   font-weight: 600;
   color: #333;
+}
+
+.back-icon {
+  color: #333;
+  cursor: pointer;
+  font-weight: bold;
 }
 
 .creation-section {
@@ -249,21 +261,6 @@ watch(showKeyboard, (value) => {
 
 .title-input {
   margin-bottom: 20px;
-  color: #333;
-}
-
-/* 聚焦状态保持深色 */
-.title-input:focus {
-  color: #222 !important;
-  /* 更深的聚焦状态 */
-  border-color: #1E62FF;
-  /* 可添加聚焦边框 */
-}
-
-/* 设置placeholder颜色 */
-.title-input::placeholder {
-  color: #aaa !important;
-  /* 浅灰色提示文字 */
 }
 
 .title-input input {
@@ -275,6 +272,18 @@ watch(showKeyboard, (value) => {
   font-size: 16px;
   box-sizing: border-box;
   background-color: #f9f9f9;
+  transition: border-color 0.3s;
+}
+
+.title-input input:focus {
+  color: #222;
+  border-color: #1E62FF;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(30, 98, 255, 0.1);
+}
+
+.title-input input::placeholder {
+  color: #aaa;
 }
 
 .creation-buttons {
@@ -284,11 +293,19 @@ watch(showKeyboard, (value) => {
 }
 
 .primary-btn {
-  background-color: #1989fa;
+  background: linear-gradient(135deg, #1989fa, #1e62ff);
   color: white;
   height: 48px;
   font-size: 16px;
   font-weight: 500;
+  border: none;
+  box-shadow: 0 4px 8px rgba(25, 137, 250, 0.2);
+  transition: all 0.3s;
+}
+
+.primary-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 4px rgba(25, 137, 250, 0.2);
 }
 
 .secondary-btn {
@@ -298,6 +315,11 @@ watch(showKeyboard, (value) => {
   height: 48px;
   font-size: 16px;
   font-weight: 500;
+  transition: all 0.3s;
+}
+
+.secondary-btn:active {
+  background-color: #f5f9ff;
 }
 
 .template-section {
@@ -324,6 +346,7 @@ watch(showKeyboard, (value) => {
 .learn-more {
   font-size: 13px;
   color: #1989fa;
+  font-weight: 500;
 }
 
 :deep(.van-search) {
@@ -339,15 +362,24 @@ watch(showKeyboard, (value) => {
 
 .category-tabs {
   margin-bottom: 16px;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #f5f7fa;
 }
 
 :deep(.van-tabs__wrap) {
   height: 40px;
+  background-color: transparent;
 }
 
 :deep(.van-tab) {
   font-size: 13px;
   padding: 0 8px;
+}
+
+:deep(.van-tab--active) {
+  font-weight: 600;
+  color: #1989fa;
 }
 
 .template-grid {
@@ -365,6 +397,13 @@ watch(showKeyboard, (value) => {
   overflow: hidden;
   height: 120px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s;
+}
+
+.template-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background-color: #f0f7ff;
 }
 
 .template-content {
@@ -400,6 +439,12 @@ watch(showKeyboard, (value) => {
   font-size: 12px;
   background-color: #1989fa;
   color: white;
+  border: none;
+  font-weight: 500;
+}
+
+.reference-btn:active {
+  opacity: 0.9;
 }
 
 .ai-popup {
@@ -444,9 +489,23 @@ textarea {
   margin-bottom: 20px;
   resize: none;
   box-sizing: border-box;
+  font-family: inherit;
+}
+
+textarea:focus {
+  border-color: #1989fa;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(25, 137, 250, 0.1);
 }
 
 .ai-generate-btn {
   height: 48px;
+  font-weight: 500;
+  background: linear-gradient(135deg, #1989fa, #1e62ff);
+  border: none;
+}
+
+.ai-generate-btn:active {
+  opacity: 0.9;
 }
 </style>

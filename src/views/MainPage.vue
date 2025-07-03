@@ -192,7 +192,7 @@
             </div>
             <div class="icon-label">微博</div>
           </div>
-          <div class="icon-item" @click="shareTo('qrcode')">
+          <div class="icon-item" @click="openQRCodeModal">
             <div class="icon-circle bg-primary">
               <van-icon name="qr" size="28" color="white" />
             </div>
@@ -202,14 +202,30 @@
         <div v-if="isCopied" class="copy-message">链接已复制到剪贴板！</div>
       </div>
     </van-dialog>
+
+    <!-- 二维码弹窗 -->
+    <van-dialog v-model:show="showQRCodeDialog" title="问卷二维码" class="qrcode-dialog">
+      <div class="dialog-content qrcode-content">
+        <div class="qrcode-container">
+          <canvas ref="qrcodeCanvas" class="qrcode-canvas"></canvas>
+        </div>
+        <div class="qrcode-tip">扫描二维码填写问卷</div>
+        <div class="survey-url">{{ shareUrl }}</div>
+        <van-button class="download-btn" type="primary" block @click="downloadQRCode">
+          <van-icon name="down" size="16" />
+          下载二维码
+        </van-button>
+      </div>
+    </van-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 import dayjs from 'dayjs';
+import QRCode from 'qrcode';
 
 const router = useRouter();
 const searchValue = ref('');
@@ -226,6 +242,10 @@ const showShareDialog = ref(false);
 const shareUrl = ref('');
 const currentSurveyTitle = ref('');
 const isCopied = ref(false);
+
+// 二维码相关状态
+const showQRCodeDialog = ref(false);
+const qrcodeCanvas = ref(null);
 
 // 创建 axios 实例
 const api = axios.create({
@@ -359,6 +379,42 @@ const copyToClipboard = () => {
 const shareTo = (platform) => {
   // 实际应用中应调用各个平台的分享API
   alert(`分享问卷到${platform}`);
+};
+
+// 打开二维码弹窗
+const openQRCodeModal = () => {
+  showQRCodeDialog.value = true;
+
+  // 在下一个tick中确保DOM已更新
+  nextTick(() => {
+    generateQRCode();
+  });
+};
+
+// 生成二维码
+const generateQRCode = () => {
+  if (qrcodeCanvas.value && shareUrl.value) {
+    QRCode.toCanvas(qrcodeCanvas.value, shareUrl.value, {
+      width: 200,
+      margin: 2,
+      color: {
+        dark: '#1989fa', // 二维码颜色
+        light: '#ffffff' // 背景颜色
+      }
+    }, (error) => {
+      if (error) console.error('生成二维码失败:', error);
+    });
+  }
+};
+
+// 下载二维码
+const downloadQRCode = () => {
+  if (qrcodeCanvas.value) {
+    const link = document.createElement('a');
+    link.download = `${currentSurveyTitle.value}-二维码.png`;
+    link.href = qrcodeCanvas.value.toDataURL('image/png');
+    link.click();
+  }
 };
 
 onMounted(() => {
@@ -898,6 +954,59 @@ const menuAction = (action) => {
     font-size: 14px;
     color: #07c160;
     animation: fade 2s;
+  }
+}
+
+/* 二维码弹窗样式 */
+.qrcode-dialog {
+  border-radius: 16px;
+  overflow: hidden;
+
+  .van-dialog__header {
+    padding-top: 16px;
+    font-weight: 600;
+    color: #333;
+  }
+
+  .qrcode-content {
+    padding: 24px;
+    text-align: center;
+  }
+
+  .qrcode-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+
+  .qrcode-canvas {
+    width: 200px;
+    height: 200px;
+    background: white;
+    padding: 12px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .qrcode-tip {
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: #333;
+  }
+
+  .survey-url {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 20px;
+    word-break: break-all;
+    padding: 0 10px;
+  }
+
+  .download-btn {
+    border-radius: 8px;
+    height: 40px;
+    font-weight: 500;
   }
 }
 
